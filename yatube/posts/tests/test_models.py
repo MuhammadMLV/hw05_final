@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from ..models import Group, Post, User
-from ..constants import FIRST_SYMBOLS_OF_POST
+from ..constants import FIRST_15_SYMBOLS
 
 
 class PostModelTest(TestCase):
@@ -25,7 +25,7 @@ class PostModelTest(TestCase):
         """Проверяем, что у моделей корректно работает __str__."""
         post = PostModelTest.post
         group = PostModelTest.group
-        self.assertEqual(str(post), post.text[:FIRST_SYMBOLS_OF_POST])
+        self.assertEqual(str(post), post.text[:FIRST_15_SYMBOLS])
         self.assertEqual(str(group), group.title)
 
     def test_verbose_name(self):

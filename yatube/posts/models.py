@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from .constants import FIRST_SYMBOLS_OF_POST
+from .constants import FIRST_15_SYMBOLS
 
 User = get_user_model()
 
@@ -43,7 +43,7 @@ class Post(models.Model):
         verbose_name_plural = 'Посты'
 
     def __str__(self):
-        return self.text[:FIRST_SYMBOLS_OF_POST]
+        return self.text[:FIRST_15_SYMBOLS]
 
 
 class Group(models.Model):

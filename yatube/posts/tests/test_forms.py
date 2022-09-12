@@ -1,3 +1,4 @@
+import http
 import shutil
 import tempfile
 
@@ -7,10 +8,10 @@ from django.test import TestCase, Client, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from ..models import Group, Post, User
+from ..models import Group, Post, User, Comment
 
-COUNT_OF_NEW_POST = 1
-POST_INDEX = 0
+COUNT_OF_NEW_ELEMENT = 1
+ZERO_INDEX = 0
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
@@ -59,7 +60,7 @@ class PostFormTest(TestCase):
             content=small_gif,
             content_type='image/gif'
         )
-        expected_count = len(posts) + COUNT_OF_NEW_POST
+        expected_count = len(posts) + COUNT_OF_NEW_ELEMENT
         form_data = {
             'text': 'Текст для новой записи',
             'group': self.group.id,
@@ -78,7 +79,7 @@ class PostFormTest(TestCase):
         )
         self.assertEqual(Post.objects.count(), expected_count)
 
-        new_post = posts_upd[POST_INDEX]
+        new_post = posts_upd[ZERO_INDEX]
         image = ImageFieldFile(
             name='posts/small.gif',
             instance=new_post,
@@ -109,3 +110,17 @@ class PostFormTest(TestCase):
         self.assertEqual(self.post.text, form_data['text'])
         self.assertEqual(self.post.group, self.new_group)
         self.assertEqual(self.post.author, self.user)
+
+    def test_comment(self):
+        """Тест валидная форма добавляет комментарий к посту."""
+        comments_count = self.post.comments.count()
+        expected_count = comments_count + COUNT_OF_NEW_ELEMENT
+        form_data = {
+            'text': 'Тестовый комментарий для поста'
+        }
+        self.client_user.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.pk}),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(self.post.comments.count(), expected_count)
