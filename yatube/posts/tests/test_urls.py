@@ -44,7 +44,7 @@ class PostURLTests(TestCase):
 
     def test_follow(self):
         """Проверка доступа к странице с подписками."""
-        response = self.client.get(f'/follow/')
+        response = self.client.get('/follow/')
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     def test_post_detail(self):

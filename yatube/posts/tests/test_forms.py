@@ -7,7 +7,7 @@ from django.test import TestCase, Client, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from ..models import Group, Post, User, Comment
+from ..models import Group, Post, User
 
 COUNT_OF_NEW_ELEMENT = 1
 ZERO_INDEX = 0
