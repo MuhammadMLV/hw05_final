@@ -2,7 +2,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 from .forms import CommentForm, PostForm
-from .models import Group, Post, User, Comment
+from .models import Comment, Follow, Group, Post, User
 from .utils import get_pagination
 
 
@@ -32,13 +32,24 @@ def group_posts(request, slug):
 
 def profile(request, username):
     """Отображает профиль зарегистрированного пользователя."""
-    user = get_object_or_404(User, username=username)
-    posts = Post.objects.select_related('group', 'author').filter(author=user)
+    author = get_object_or_404(User, username=username)
+    is_authorized_user = User.objects.filter(
+        username=request.user.username
+    ).exists()
+
+    posts = Post.objects.select_related(
+        'group', 'author'
+    ).filter(author=author)
     page_obj = get_pagination(request, posts)
     context = {
-        'author': user,
+        'author': author,
         'page_obj': page_obj,
     }
+    if is_authorized_user:
+        following = Follow.objects.filter(
+            author=author, user=request.user
+        ).exists()
+        context['following'] = following
 
     return render(request, 'posts/profile.html', context)
 
@@ -108,3 +119,38 @@ def add_comment(request, post_id):
         comment.save()
 
     return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    """Отображает посты авторов из подписок пользователя."""
+    user = request.user
+    posts = Post.objects.filter(author__following__user=user)
+    page_obj = get_pagination(request, posts)
+    context = {
+        'page_obj': page_obj
+    }
+
+    return render(request, 'posts/follow.html', context)
+
+
+@login_required
+def profile_follow(request, username):
+    """Подписка на интересного и забавного автора."""
+    author = get_object_or_404(User, username=username)
+    if request.user != author and not Follow.objects.filter(
+        author=author, user=request.user
+    ).exists():
+        Follow.objects.create(user=request.user, author=author)
+
+    return redirect('posts:profile', author.username)
+
+
+@login_required
+def profile_unfollow(request, username):
+    """Отписка от надоеливого или скучного автора."""
+    author = get_object_or_404(User, username=username)
+    if Follow.objects.filter(user=request.user, author=author).exists():
+        Follow.objects.get(user=request.user, author=author).delete()
+
+    return redirect('posts:profile', author.username)

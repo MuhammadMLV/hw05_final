@@ -3,6 +3,7 @@ import tempfile
 
 from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.paginator import Page
 from django.db.models import FileField
@@ -10,10 +11,11 @@ from django.db.models.fields.files import ImageFieldFile
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
-from ..models import Group, User, Post
+from ..models import Group, User, Post, Follow
 from ..constants import (
     POSTS_ON_PAGE, POSTS_ON_SECOND_PAGE, FIRST_POST_ON_PAGE
 )
+from .test_forms import COUNT_OF_NEW_ELEMENT
 from ..utils import posts_bulk_create
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -290,3 +292,90 @@ class PostViewsTests(TestCase):
             with self.subTest(url=url):
                 page_obj = response.context.get('page_obj')
                 self.assertEqual(page_obj[FIRST_POST_ON_PAGE], new_post)
+
+
+class CacheTest(TestCase):
+    """Тест на проверку работы кэширования."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username='testuser')
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+        Post.objects.create(
+            text='Тестовый пост',
+            author=cls.user,
+        )
+        cls.INDEX = reverse('posts:index')
+
+    def test_cache(self):
+        """Проверяет работоспособность кэша."""
+        response_1 = self.authorized_client.get(self.INDEX)
+        Post.objects.create(
+            text='Новый тестовый текст',
+            author=self.user,
+        )
+        response_2 = self.authorized_client.get(self.INDEX)
+        self.assertEqual(
+            response_1.content,
+            response_2.content
+        )
+        cache.clear()
+        response_3 = self.authorized_client.get(self.INDEX)
+        self.assertNotEqual(
+            response_1.content,
+            response_3.content
+        )
+
+
+class FollowTestCase(TestCase):
+    """Тест на проверку работы подписок."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.following_1 = User.objects.create_user(username='famous_user_1')
+        cls.following_2 = User.objects.create_user(username='famous_user_2')
+        cls.user = User.objects.create_user(username='test_user')
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+        Follow.objects.create(user=cls.user, author=cls.following_1)
+        cls.post_1 = Post.objects.create(
+            text='Пост посвящается подсписчику', author=cls.following_1
+        )
+        cls.post_2 = Post.objects.create(
+            text='Пост посвящается автору', author=cls.following_2
+        )
+
+    def test_authorized_user_can_follow(self):
+        """Проверяет возможность подписки на известного автора."""
+        expected_count = Follow.objects.count() + COUNT_OF_NEW_ELEMENT
+        self.authorized_client.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.following_2.username}
+            )
+        )
+        self.assertEqual(self.user.follower.count(), expected_count)
+
+    def test_authorized_user_can_unfollow(self):
+        """Проверяет возможность отписки от скучного автора."""
+        expected_count = Follow.objects.count() - COUNT_OF_NEW_ELEMENT
+        self.authorized_client.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.following_1.username}
+            )
+        )
+        self.assertEqual(self.user.follower.count(), expected_count)
+
+    def test_follower_sees_following_author_posts(self):
+        """Подписчик видит посты избранных авторов."""
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertIn(self.post_1, response.context.get('page_obj'))
+
+    def test_follower_not_sees_stranger_posts(self):
+        """В список избранных не попадают посты незнакомых авторов."""
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertNotIn(self.post_2, response.context.get('page_obj'))

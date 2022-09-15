@@ -42,6 +42,11 @@ class PostURLTests(TestCase):
         response = self.client.get(f'/profile/{self.user.username}/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
+    def test_follow(self):
+        """Проверка доступа к странице с подписками."""
+        response = self.client.get(f'/follow/')
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
     def test_post_detail(self):
         """Проверка доступа к странице с подробной информацией о посте."""
         response = self.client.get(f'/posts/{self.post.pk}/')
@@ -77,6 +82,8 @@ class PostURLTests(TestCase):
             f'/posts/{self.post.pk}/': 'posts/post_detail.html',
             f'/posts/{self.post.pk}/edit/': 'posts/create_post.html',
             '/create/': 'posts/create_post.html',
+            '/something/must_be/here/': 'core/404.html',
+            '/follow/': 'posts/follow.html',
         }
         for address, template in templates_url_names.items():
             with self.subTest(address=address):

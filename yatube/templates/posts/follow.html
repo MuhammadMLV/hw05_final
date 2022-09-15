@@ -3,14 +3,12 @@
 {% load cache %}
 
 {% block title %}
-  Последние обновления на сайте
+  Посты по подпискам
 {% endblock %}
 
 {% block content %}
-  {% include 'posts/includes/switcher.html' %}
   <div class="container py-5">
-    <h1>Последние обновления на сайте</h1>
-    {% cache 20 'index_page' page_obj.number %}
+    <h1>Посты по подпискам</h1>
     {% for post in page_obj %}
       <article>
         <ul>
@@ -38,6 +36,5 @@
       </article>
       {% if not forloop.last %}<hr>{% endif %}
     {% endfor %}
-    {% endcache %}
   </div>
 {% endblock %}
