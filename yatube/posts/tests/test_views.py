@@ -15,7 +15,6 @@ from ..models import Group, User, Post, Follow
 from ..constants import (
     POSTS_ON_PAGE, POSTS_ON_SECOND_PAGE, FIRST_POST_ON_PAGE
 )
-from .test_forms import COUNT_OF_NEW_ELEMENT
 from ..utils import posts_bulk_create
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -233,7 +232,7 @@ class PostViewsTests(TestCase):
         post = self.get_first_post_on_page(page_obj)
         self.assertEqual(post, self.latest_post)
         self.assertEqual(post.id, self.latest_post.id)
-        self.assertEqual( post.text, self.latest_post.text)
+        self.assertEqual(post.text, self.latest_post.text)
         self.assertEqual(post.group, self.latest_post.group)
         self.assertEqual(post.author, self.latest_post.author)
         self.assertEqual(response.context.get('author'), self.author)
