@@ -20,7 +20,7 @@ def index(request):
 def group_posts(request, slug):
     """Отображает все посты выбранной категории в порядке убывания по дате."""
     group = get_object_or_404(Group, slug=slug)
-    posts = Post.objects.filter(group=group)
+    posts = group.posts.all()
     page_obj = get_pagination(request, posts)
     context = {
         'group': group,
@@ -33,19 +33,13 @@ def group_posts(request, slug):
 def profile(request, username):
     """Отображает профиль зарегистрированного пользователя."""
     author = get_object_or_404(User, username=username)
-    is_authorized_user = User.objects.filter(
-        username=request.user.username
-    ).exists()
-
-    posts = Post.objects.select_related(
-        'group', 'author'
-    ).filter(author=author)
+    posts = author.posts.all()
     page_obj = get_pagination(request, posts)
     context = {
         'author': author,
         'page_obj': page_obj,
     }
-    if is_authorized_user:
+    if request.user.is_authenticated:
         following = Follow.objects.filter(
             author=author, user=request.user
         ).exists()
@@ -57,7 +51,7 @@ def profile(request, username):
 def post_detail(request, post_id):
     """Отображает выбранный пост."""
     post = get_object_or_404(Post, pk=post_id)
-    comments = Comment.objects.filter(post=post.id).select_related('author')
+    comments = post.comments.all()
     form = CommentForm()
     context = {
         'post': post,
@@ -72,7 +66,7 @@ def post_detail(request, post_id):
 def post_create(request):
     """Отображает форму для создания новой записи."""
     form = PostForm(request.POST or None, files=request.FILES or None)
-    if request.method == 'POST' and form.is_valid():
+    if form.is_valid():
         new_post = form.save(commit=False)
         new_post.author = request.user
         new_post.save()
@@ -124,8 +118,7 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     """Отображает посты авторов из подписок пользователя."""
-    user = request.user
-    posts = Post.objects.filter(author__following__user=user)
+    posts = Post.objects.filter(author__following__user=request.user)
     page_obj = get_pagination(request, posts)
     context = {
         'page_obj': page_obj
@@ -150,7 +143,6 @@ def profile_follow(request, username):
 def profile_unfollow(request, username):
     """Отписка от надоеливого или скучного автора."""
     author = get_object_or_404(User, username=username)
-    if Follow.objects.filter(user=request.user, author=author).exists():
-        Follow.objects.get(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user, author=author).delete()
 
     return redirect('posts:profile', author.username)

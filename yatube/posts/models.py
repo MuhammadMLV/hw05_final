@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from .constants import FIRST_15_SYMBOLS
+from .constants import FIRST_SYMBOLS
 
 User = get_user_model()
 
@@ -43,7 +43,7 @@ class Post(models.Model):
         verbose_name_plural = 'Посты'
 
     def __str__(self):
-        return self.text[:FIRST_15_SYMBOLS]
+        return self.text[:FIRST_SYMBOLS]
 
 
 class Group(models.Model):
@@ -104,6 +104,12 @@ class Follow(models.Model):
     class Meta:
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_user_author'
+            )
+        ]
 
     def __str__(self):
         return f'{self.user} - {self.author}'

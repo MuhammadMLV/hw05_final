@@ -7,7 +7,7 @@ from django.test import TestCase, Client, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from ..models import Group, Post, User
+from ..models import Group, Post, User, Comment
 
 COUNT_OF_NEW_ELEMENT = 1
 ZERO_INDEX = 0
@@ -122,4 +122,7 @@ class PostFormTest(TestCase):
             data=form_data,
             follow=True
         )
+        latest_comment = Comment.objects.all()[0]
         self.assertEqual(self.post.comments.count(), expected_count)
+        self.assertEqual(latest_comment.text, form_data['text'])
+        self.assertEqual(latest_comment.author, self.user)

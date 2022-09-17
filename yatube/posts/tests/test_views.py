@@ -77,43 +77,28 @@ class PostViewsTests(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-    def test_home_page_uses_correct_template(self):
-        """View функция index получает правильный шаблон."""
-        response = self.client.get(reverse('posts:index'))
-        self.assertTemplateUsed(response, 'posts/index.html')
+    def get_first_post_on_page(self, page_obj):
+        return page_obj[FIRST_POST_ON_PAGE]
 
-    def test_group_list_page_uses_correct_template(self):
-        """View функция group_list получает правильный шаблон."""
-        response = self.client.get(
-            reverse('posts:group_list', kwargs={'slug': self.group.slug})
-        )
-        self.assertTemplateUsed(response, 'posts/group_list.html')
-
-    def test_profile_page_uses_correct_template(self):
-        """View функция profile получает правильный шаблон."""
-        response = self.client.get(
-            reverse('posts:profile', kwargs={'username': self.user.username})
-        )
-        self.assertTemplateUsed(response, 'posts/profile.html')
-
-    def test_post_detail_page_uses_correct_template(self):
-        """View функция post_detail получает правильный шаблон."""
-        response = self.client.get(
-            reverse('posts:post_detail', kwargs={'post_id': self.post.pk})
-        )
-        self.assertTemplateUsed(response, 'posts/post_detail.html')
-
-    def test_post_create_page_uses_correct_template(self):
-        """View функция post_create получает правильный шаблон."""
-        response = self.authorized_client.get(reverse('posts:post_create'))
-        self.assertTemplateUsed(response, 'posts/create_post.html')
-
-    def test_post_edit_page_uses_correct_template(self):
-        """View функция post_edit получает правильный шаблон."""
-        response = self.client_author.get(
-            reverse('posts:post_edit', kwargs={'post_id': self.post.pk})
-        )
-        self.assertTemplateUsed(response, 'posts/create_post.html')
+    def test_pages_uses_correct_templates(self):
+        """Страницы используют правильные шаблоны."""
+        urls_to_check = {
+            reverse('posts:index'): 'posts/index.html',
+            reverse('posts:post_create'): 'posts/create_post.html',
+            reverse('posts:follow_index'): 'posts/follow.html',
+            reverse('posts:group_list', kwargs={'slug': self.group.slug}):
+                'posts/group_list.html',
+            reverse('posts:profile', kwargs={'username': self.user.username}):
+                'posts/profile.html',
+            reverse('posts:post_detail', kwargs={'post_id': self.post.pk}):
+                'posts/post_detail.html',
+            reverse('posts:post_edit', kwargs={'post_id': self.post.pk}):
+                'posts/create_post.html',
+        }
+        for url, template in urls_to_check.items():
+            with self.subTest(url=url):
+                response = self.client_author.get(url)
+                self.assertTemplateUsed(response, template)
 
     def test_post_detail_page_uses_correct_context(self):
         """View функция post_detail использует верный контекст."""
@@ -204,23 +189,18 @@ class PostViewsTests(TestCase):
         response = self.client.get(reverse('posts:index'))
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE], self.latest_post)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].id, self.latest_post.id)
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].text, self.latest_post.text
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].group, self.latest_post.group
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].author, self.latest_post.author
-        )
+        post = self.get_first_post_on_page(page_obj)
+        self.assertEqual(post, self.latest_post)
+        self.assertEqual(post.id, self.latest_post.id)
+        self.assertEqual(post.text, self.latest_post.text)
+        self.assertEqual(post.group, self.latest_post.group)
+        self.assertEqual(post.author, self.latest_post.author)
         image = ImageFieldFile(
-            name=page_obj[FIRST_POST_ON_PAGE].image.name,
-            instance=page_obj[FIRST_POST_ON_PAGE],
+            name=post.image.name,
+            instance=post,
             field=FileField()
         )
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].image, image)
+        self.assertEqual(post.image, image)
 
     def test_group_list_page_uses_correct_context(self):
         """Тест view-функция group_list использует верный контекст."""
@@ -229,24 +209,19 @@ class PostViewsTests(TestCase):
         )
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE], self.latest_post)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].id, self.latest_post.id)
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].text, self.latest_post.text
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].group, self.latest_post.group
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].author, self.latest_post.author
-        )
+        post = self.get_first_post_on_page(page_obj)
+        self.assertEqual(post, self.latest_post)
+        self.assertEqual(post.id, self.latest_post.id)
+        self.assertEqual(post.text, self.latest_post.text)
+        self.assertEqual(post.group, self.latest_post.group)
+        self.assertEqual(post.author, self.latest_post.author)
         self.assertEqual(response.context.get('group'), self.group)
         image = ImageFieldFile(
-            name=page_obj[FIRST_POST_ON_PAGE].image.name,
-            instance=page_obj[FIRST_POST_ON_PAGE],
+            name=post.image.name,
+            instance=post,
             field=FileField()
         )
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].image, image)
+        self.assertEqual(post.image, image)
 
     def test_profile_page_uses_correct_context(self):
         """Тест view-функция profile использует верный контекст."""
@@ -255,24 +230,19 @@ class PostViewsTests(TestCase):
         )
         page_obj = response.context.get('page_obj', None)
         self.assertIsInstance(page_obj, Page)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE], self.latest_post)
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].id, self.latest_post.id)
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].text, self.latest_post.text
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].group, self.latest_post.group
-        )
-        self.assertEqual(
-            page_obj[FIRST_POST_ON_PAGE].author, self.latest_post.author
-        )
+        post = self.get_first_post_on_page(page_obj)
+        self.assertEqual(post, self.latest_post)
+        self.assertEqual(post.id, self.latest_post.id)
+        self.assertEqual( post.text, self.latest_post.text)
+        self.assertEqual(post.group, self.latest_post.group)
+        self.assertEqual(post.author, self.latest_post.author)
         self.assertEqual(response.context.get('author'), self.author)
         image = ImageFieldFile(
-            name=page_obj[FIRST_POST_ON_PAGE].image.name,
-            instance=page_obj[FIRST_POST_ON_PAGE],
+            name=post.image.name,
+            instance=post,
             field=FileField()
         )
-        self.assertEqual(page_obj[FIRST_POST_ON_PAGE].image, image)
+        self.assertEqual(post.image, image)
 
     def test_new_post_located_on_first_position(self):
         """Тест проверка на наличие поста на первой позиции на главной
@@ -350,25 +320,33 @@ class FollowTestCase(TestCase):
 
     def test_authorized_user_can_follow(self):
         """Проверяет возможность подписки на известного автора."""
-        expected_count = Follow.objects.count() + COUNT_OF_NEW_ELEMENT
+        expected = Follow.objects.filter(
+            author=self.following_2, user=self.user
+        ).exists()
         self.authorized_client.get(
             reverse(
                 'posts:profile_follow',
                 kwargs={'username': self.following_2.username}
             )
         )
-        self.assertEqual(self.user.follower.count(), expected_count)
+        self.assertNotEqual(
+            Follow.objects.filter(author=self.following_2, user=self.user),
+            expected)
 
     def test_authorized_user_can_unfollow(self):
         """Проверяет возможность отписки от скучного автора."""
-        expected_count = Follow.objects.count() - COUNT_OF_NEW_ELEMENT
+        expected = Follow.objects.filter(
+            author=self.following_1, user=self.user
+        ).exists()
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.following_1.username}
             )
         )
-        self.assertEqual(self.user.follower.count(), expected_count)
+        self.assertNotEqual(
+            Follow.objects.filter(author=self.following_1, user=self.user),
+            expected)
 
     def test_follower_sees_following_author_posts(self):
         """Подписчик видит посты избранных авторов."""
