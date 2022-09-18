@@ -11,6 +11,7 @@ from django.db.models.fields.files import ImageFieldFile
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
+from .test_forms import ZERO_INDEX
 from ..models import Group, User, Post, Follow
 from ..constants import (
     POSTS_ON_PAGE, POSTS_ON_SECOND_PAGE, FIRST_POST_ON_PAGE
@@ -188,18 +189,6 @@ class PostViewsTests(TestCase):
         response = self.client.get(reverse('posts:index'))
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
-        post = self.get_first_post_on_page(page_obj)
-        self.assertEqual(post, self.latest_post)
-        self.assertEqual(post.id, self.latest_post.id)
-        self.assertEqual(post.text, self.latest_post.text)
-        self.assertEqual(post.group, self.latest_post.group)
-        self.assertEqual(post.author, self.latest_post.author)
-        image = ImageFieldFile(
-            name=post.image.name,
-            instance=post,
-            field=FileField()
-        )
-        self.assertEqual(post.image, image)
 
     def test_group_list_page_uses_correct_context(self):
         """Тест view-функция group_list использует верный контекст."""
@@ -208,19 +197,24 @@ class PostViewsTests(TestCase):
         )
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
-        post = self.get_first_post_on_page(page_obj)
-        self.assertEqual(post, self.latest_post)
-        self.assertEqual(post.id, self.latest_post.id)
-        self.assertEqual(post.text, self.latest_post.text)
-        self.assertEqual(post.group, self.latest_post.group)
-        self.assertEqual(post.author, self.latest_post.author)
         self.assertEqual(response.context.get('group'), self.group)
-        image = ImageFieldFile(
-            name=post.image.name,
-            instance=post,
-            field=FileField()
-        )
-        self.assertEqual(post.image, image)
+
+    def test_pages_uses_correct_context(self):
+        urls_to_check = [
+            reverse('posts:profile', kwargs={'username': self.author}),
+            reverse('posts:group_list', kwargs={'slug': self.group.slug}),
+            reverse('posts:index'),
+        ]
+        for url in urls_to_check:
+            response = self.client.get(url)
+            page_obj = response.context.get('page_obj')
+            post = self.get_first_post_on_page(page_obj)
+            self.assertEqual(post, self.latest_post)
+            self.assertEqual(post.id, self.latest_post.id)
+            self.assertEqual(post.text, self.latest_post.text)
+            self.assertEqual(post.group, self.latest_post.group)
+            self.assertEqual(post.author, self.latest_post.author)
+            self.assertEqual(post.image, self.latest_post.image)
 
     def test_profile_page_uses_correct_context(self):
         """Тест view-функция profile использует верный контекст."""
@@ -229,19 +223,7 @@ class PostViewsTests(TestCase):
         )
         page_obj = response.context.get('page_obj', None)
         self.assertIsInstance(page_obj, Page)
-        post = self.get_first_post_on_page(page_obj)
-        self.assertEqual(post, self.latest_post)
-        self.assertEqual(post.id, self.latest_post.id)
-        self.assertEqual(post.text, self.latest_post.text)
-        self.assertEqual(post.group, self.latest_post.group)
-        self.assertEqual(post.author, self.latest_post.author)
         self.assertEqual(response.context.get('author'), self.author)
-        image = ImageFieldFile(
-            name=post.image.name,
-            instance=post,
-            field=FileField()
-        )
-        self.assertEqual(post.image, image)
 
     def test_new_post_located_on_first_position(self):
         """Тест проверка на наличие поста на первой позиции на главной
@@ -319,33 +301,29 @@ class FollowTestCase(TestCase):
 
     def test_authorized_user_can_follow(self):
         """Проверяет возможность подписки на известного автора."""
-        expected = Follow.objects.filter(
-            author=self.following_2, user=self.user
-        ).exists()
         self.authorized_client.get(
             reverse(
                 'posts:profile_follow',
                 kwargs={'username': self.following_2.username}
             )
         )
-        self.assertNotEqual(
-            Follow.objects.filter(author=self.following_2, user=self.user),
-            expected)
+        follow = Follow.objects.filter(
+            user=self.user, author=self.following_2
+        )[ZERO_INDEX]
+        self.assertIn(follow, Follow.objects.all())
 
     def test_authorized_user_can_unfollow(self):
         """Проверяет возможность отписки от скучного автора."""
-        expected = Follow.objects.filter(
-            author=self.following_1, user=self.user
-        ).exists()
+        follow = Follow.objects.filter(
+            user=self.user, author=self.following_1
+        )[ZERO_INDEX]
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.following_1.username}
             )
         )
-        self.assertNotEqual(
-            Follow.objects.filter(author=self.following_1, user=self.user),
-            expected)
+        self.assertNotIn(follow, Follow.objects.all())
 
     def test_follower_sees_following_author_posts(self):
         """Подписчик видит посты избранных авторов."""

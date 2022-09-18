@@ -112,8 +112,8 @@ class PostFormTest(TestCase):
 
     def test_comment(self):
         """Тест валидная форма добавляет комментарий к посту."""
-        comments_count = self.post.comments.count()
-        expected_count = comments_count + COUNT_OF_NEW_ELEMENT
+        comments = list(Comment.objects.values_list('id', flat=True))
+        expected_count = len(comments) + COUNT_OF_NEW_ELEMENT
         form_data = {
             'text': 'Тестовый комментарий для поста'
         }
@@ -122,7 +122,8 @@ class PostFormTest(TestCase):
             data=form_data,
             follow=True
         )
-        latest_comment = Comment.objects.all()[0]
+        comment_upd = Comment.objects.exclude(id__in=comments)
+        new_comment = comment_upd[ZERO_INDEX]
         self.assertEqual(self.post.comments.count(), expected_count)
-        self.assertEqual(latest_comment.text, form_data['text'])
-        self.assertEqual(latest_comment.author, self.user)
+        self.assertEqual(new_comment.text, form_data['text'])
+        self.assertEqual(new_comment.author, self.user)
