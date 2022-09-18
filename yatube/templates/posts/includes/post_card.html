@@ -12,13 +12,17 @@
     <img class="card-img my-2" src="{{ im.url }}">
   {% endthumbnail %}
   <p>{{ post.text|linebreaksbr }}</p>
-  {% if post.group %}
-    <a href="{% url 'posts:group_list' post.group.slug %}">
-      все записи группы {{ post.group.title }}
-    </a>
-  {% else %}
-    <p>У поста нет группы</p>
-  {% endif %}
+  {% with request.resolver_match.view_name as view_name %}
+    {% if view_name != 'posts:group_list' %}
+      {% if post.group %}
+        <a href="{% url 'posts:group_list' post.group.slug %}">
+          все записи группы {{ post.group.title }}
+        </a>
+      {% else %}
+        <p>У поста нет группы</p>
+      {% endif %}
+    {% endif %}
+  {% endwith %}
   <p>
     <a href="{% url 'posts:post_detail' post.pk %}">Подробная информация</a>
   </p>
