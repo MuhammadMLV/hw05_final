@@ -80,6 +80,15 @@ class PostViewsTests(TestCase):
     def get_first_post_on_page(self, page_obj):
         return page_obj[FIRST_POST_ON_PAGE]
 
+    def check_post(self, page_obj):
+        post = self.get_first_post_on_page(page_obj)
+        self.assertEqual(post, self.latest_post)
+        self.assertEqual(post.id, self.latest_post.id)
+        self.assertEqual(post.text, self.latest_post.text)
+        self.assertEqual(post.group, self.latest_post.group)
+        self.assertEqual(post.author, self.latest_post.author)
+        self.assertEqual(post.image, self.latest_post.image)
+
     def test_pages_uses_correct_templates(self):
         """Страницы используют правильные шаблоны."""
         urls_to_check = {
@@ -189,6 +198,7 @@ class PostViewsTests(TestCase):
         response = self.client.get(reverse('posts:index'))
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
+        self.check_post(page_obj)
 
     def test_group_list_page_uses_correct_context(self):
         """Тест view-функция group_list использует верный контекст."""
@@ -198,23 +208,7 @@ class PostViewsTests(TestCase):
         page_obj = response.context.get('page_obj')
         self.assertIsInstance(page_obj, Page)
         self.assertEqual(response.context.get('group'), self.group)
-
-    def test_pages_uses_correct_context(self):
-        urls_to_check = [
-            reverse('posts:profile', kwargs={'username': self.author}),
-            reverse('posts:group_list', kwargs={'slug': self.group.slug}),
-            reverse('posts:index'),
-        ]
-        for url in urls_to_check:
-            response = self.client.get(url)
-            page_obj = response.context.get('page_obj')
-            post = self.get_first_post_on_page(page_obj)
-            self.assertEqual(post, self.latest_post)
-            self.assertEqual(post.id, self.latest_post.id)
-            self.assertEqual(post.text, self.latest_post.text)
-            self.assertEqual(post.group, self.latest_post.group)
-            self.assertEqual(post.author, self.latest_post.author)
-            self.assertEqual(post.image, self.latest_post.image)
+        self.check_post(page_obj)
 
     def test_profile_page_uses_correct_context(self):
         """Тест view-функция profile использует верный контекст."""
@@ -224,6 +218,7 @@ class PostViewsTests(TestCase):
         page_obj = response.context.get('page_obj', None)
         self.assertIsInstance(page_obj, Page)
         self.assertEqual(response.context.get('author'), self.author)
+        self.check_post(page_obj)
 
     def test_new_post_located_on_first_position(self):
         """Тест проверка на наличие поста на первой позиции на главной
@@ -301,29 +296,35 @@ class FollowTestCase(TestCase):
 
     def test_authorized_user_can_follow(self):
         """Проверяет возможность подписки на известного автора."""
+        follow = Follow.objects.filter(
+            user=self.user, author=self.following_2
+        ).exists()
         self.authorized_client.get(
             reverse(
                 'posts:profile_follow',
                 kwargs={'username': self.following_2.username}
             )
         )
-        follow = Follow.objects.filter(
+        follow_upd = Follow.objects.filter(
             user=self.user, author=self.following_2
-        )[ZERO_INDEX]
-        self.assertIn(follow, Follow.objects.all())
+        ).exists()
+        self.assertNotEqual(follow, follow_upd)
 
     def test_authorized_user_can_unfollow(self):
         """Проверяет возможность отписки от скучного автора."""
         follow = Follow.objects.filter(
             user=self.user, author=self.following_1
-        )[ZERO_INDEX]
+        ).exists()
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.following_1.username}
             )
         )
-        self.assertNotIn(follow, Follow.objects.all())
+        follow_upd = Follow.objects.filter(
+            user=self.user, author=self.following_1
+        ).exists()
+        self.assertNotEqual(follow, follow_upd)
 
     def test_follower_sees_following_author_posts(self):
         """Подписчик видит посты избранных авторов."""
