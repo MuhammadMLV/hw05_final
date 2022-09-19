@@ -11,7 +11,6 @@ from django.db.models.fields.files import ImageFieldFile
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
-from .test_forms import ZERO_INDEX
 from ..models import Group, User, Post, Follow
 from ..constants import (
     POSTS_ON_PAGE, POSTS_ON_SECOND_PAGE, FIRST_POST_ON_PAGE
