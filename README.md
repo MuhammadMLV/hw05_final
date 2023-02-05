@@ -3,11 +3,13 @@
 Клонировать репозиторий и перейти в него в командной строке:
 
 ```
-https://github.com/boreesych/kittygram_backend.git
+https://github.com/MuhammadMLV/hw05_final.git
 ```
 
+Зайти в папку на уровень выше командой
+
 ```
-cd kittygram_backend
+cd yatube
 ```
 
 Cоздать и активировать виртуальное окружение:
@@ -17,12 +19,9 @@ python3 -m venv env
 ```
 
 ```
-source env/bin/activate
+source env/bin/activate  ИЛИ  env/scripts/activate
 ```
 
-```
-python3 -m pip install --upgrade pip
-```
 
 Установить зависимости из файла requirements.txt:
 
@@ -41,11 +40,3 @@ python3 manage.py migrate
 ```
 python3 manage.py runserver
 ```
-
-Чтобы просмотреть документацию проекта, перейдите 
-по адресу
-
-```
-127.0.0.1:8000/redoc/
-```
-какой-то текст 
